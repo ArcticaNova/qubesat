@@ -1,4 +1,4 @@
-class CubeSatFSM():
+class QubeSatFSM():
   # constructor for cubesat
   def__init__(self):
 

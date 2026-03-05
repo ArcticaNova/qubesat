@@ -1,4 +1,4 @@
-class CubeSatFSM() {
+class CubeSatFSM():
   # constructor for cubesat
   def__init__(self):
 
@@ -10,4 +10,4 @@ class CubeSatFSM() {
     self.mission_time=0.0 # keeps track of how much time has passed 
     self.experiment_active # true = experiment has started
 
-}
+

@@ -10,14 +10,14 @@ class QubeSatFSM():
                 otherwise -> execute state immediately
         '''
 
-    def __init__(self):
+def __init__(self):
         self.state = State.idle #default state = charging mode 
         self.missionTime = 0.0 # how much time has passed so far, 0 at the beginning
         self.power = PowerLevel() 
         
         # making a dictionary with key = "equipment" and value = period (in seconds)
         # have to fill in the periods for the other things later on!!
-        self.periods = {"beacon": 30*60, "battery-check": , "transition": , 'sd_card': 30*60, "burn_wire": , 
+        self.periods = {"beacon": 30*60, "battery_check": , "transition": , 'sd_card': 30*60, "burn_wire": , 
         "receive_data": , "init_payload": (30*60)}
 
         #boolean values to check different stages of mission
@@ -43,12 +43,28 @@ class QubeSatFSM():
             Task("Battery Check", , self.periods["battery_check"],schedule_later=True, func=self._task_battery_check),
             Task("Transition Check", 3, self.periods["transition"], schedule_later=True,func=self._task_transition_check),]
 
+    # initalize sd card -> activate burn wire -> check battery -> beacon -> transition
     def build_deployment_tasks():
-   
-    def build_comms_tasks():
-
+        tasks=[Task("SD_Card", 1, self.periods["sd_card"], schedule_later=False, func=self.__task_init_sd_card), 
+        Task("Burn Wire", 2, self.periods["burn_wire"], schedule_later=True, func=self._task_activate_burn_wire),
+        Task("Battery Check", 3, self.periods["battery_check"], schedule_later=True, func=self._task_battery_check), 
+        Task("Beacon", 4, self.periods["beacon"], schedule_later=True,  func=self._task_beacon),
+        Task("Transition Check", 5, self.periods["transition"],schedule_later=True,  func=self._task_transition_check),]
     
+    def build_comms_tasks():
+        tasks = [
+            Task("Solar Panel Enable",1, self.periods["battery_check"],schedule_later=False, func=self._task_enable_solar_panels),
+            Task("Battery Check",2, self.periods["battery_check"],schedule_later=True,func=self._task_battery_check),
+            Task("Beacon",3, self.periods["beacon"],schedule_later=True,func=self._task_beacon),
+            Task("Transition Check",4, self.periods["transition"],schedule_later=True,func=self._task_transition_check),
+        ]
+
     def build_science_tasks():
+        tasks=[Task("Initialize Payload",1,self.periods["init_payload"],schedule_later=False, func=self._task_init_payload),
+        Task("Receive Data", 2, self.periods["receive_data"],schedule_later=True,func=self._task_receive_data),
+        Task("Record to Memory",3, self.periods["record_memory"], schedule_later=True,func=self._task_record_memory),
+        Task("Transition Check",4, self.periods["transition"],schedule_later=True,func=self._task_transition_check),
+        ]
 
     '''
         this state is entered when battery is below the low_power_threshold

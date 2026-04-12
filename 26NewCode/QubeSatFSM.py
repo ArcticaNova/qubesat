@@ -71,7 +71,16 @@ def __init__(self):
         this state is entered when battery is below the low_power_threshold
 
     '''
-    def run_idle(self): 
+    def build_idle_tasks(self): 
+        task = [
+            Task("Beacon", 1, self.periods["beacon"], schedule_later=False, func = self._task_beacon), 
+            Task("Battery Check", 2, self.periods["battery check"], schedule_later = True, func = self._task_battery_check),
+            Task("Transition", 3, self.periods["transition"]), schedule_later = True, func = self._task_transition_check)
+            # after the battery check is satisfactory -> should go bak to deployment 
+            # after that function of checking battery is ran (and returns true) -> schedule_later = false -> should transition
+            # after idle state -> should go back to science + comms 
+        ]
+        # self, name, priority, period, schedule_later, func
 
     
 

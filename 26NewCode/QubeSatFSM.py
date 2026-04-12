@@ -1,6 +1,8 @@
 import time 
 
 class QubeSatFSM():
+    high_level_threshold=80.0
+    low_level_threshold=20.0
 
     # initalizing some values/parts of the qubesat (still very incomplete atp)
         '''
@@ -81,9 +83,20 @@ def __init__(self):
         ]
         # self, name, priority, period, schedule_later, func
 
+    # going to start defining the functions that are ran for each action in the tasks 
     
+    def transition(self, new_state): 
+        self.state=new_state
+        self.tasks = self._build_tasks_for_state(new_state) # want to build the tasks for this new state 
+
+    def build_idle_tasks():
+
+    def task_battery_check():
+        level = # this has to be connected to some sort of hardware call to check battery 
+        if level < low_level_threshold: 
+            transition(self, State.IDLE)
+
+    def 
 
 
-
-
-
+ 

@@ -15,7 +15,8 @@ class QubeSatFSM():
 def __init__(self):
         self.state = State.idle #default state = charging mode 
         self.missionTime = 0.0 # how much time has passed so far, 0 at the beginning
-        self.power = PowerLevel() 
+        self.power = PowerLevel()
+        self.temperature = TemperatureCheck() #makes sure that the temperature doesn't overheat and mess up the battery since there's apparently a way to check the temperature we js gotta figure out how to do that but don't worry about it for now
         
         # making a dictionary with key = "equipment" and value = period (in seconds)
         # have to fill in the periods for the other things later on!!
@@ -25,7 +26,7 @@ def __init__(self):
         #boolean values to check different stages of mission
         self.experiment_started=False #this is True if experiment has started/isrunning and false if not 
         self.sd_card_initalized = False #shouldn't be initalized until after deployment 
-        self.solar_panels_on=False 
+        self.solar_panels_on=False
 
         # boolean values to check that the equipment is functional 
         # initialize them to false (after they are checked -> every value should = True)

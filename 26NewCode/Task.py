@@ -22,15 +22,14 @@ class Task():
         #if last_run_time is None (task has never been run before) -> should run it
         #otherwise -> see how much current time - last run time is (if it's more than period -> should run again)
 
-def is_due(self, now: float):
+     def is_due(self, now: float) -> bool:
         if self.last_run_time is None:
-            return True
-        time_passed=now-self.last_run_time
-        return (time_passed >= self.period_s)
+            return not self.schedule_later  # if schedule_later=True, don't run immediately
+        return (now - self.last_run_time) >= self.period  # was self.period_s, wrong name
 
-    # this method should actually execute the task 
-def run(self):
+     def run(self):
         result = self.func()
-        self.last_run_time = time.monotonic() # after the method is run -> record the last run_time with the current time 
-        return result # this should return whatever result the task has 
+        self.last_run_time = time.monotonic()
+        return result
+
 

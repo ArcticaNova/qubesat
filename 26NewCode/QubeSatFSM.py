@@ -91,7 +91,7 @@ class QubeSatFSM():
         task = [
             Task("Beacon", 1, self.periods["beacon"], schedule_later=False, func = self._task_beacon), 
             Task("Battery Check", 2, self.periods["battery_check"], schedule_later = True, func = self._task_battery_check),
-            Task("Transition", 3, self.periods["transition"]), schedule_later = True, func = self._task_transition_check)]
+            Task("Transition", 3, self.periods["transition"], schedule_later = True, func = self._task_transition_check)]
             # after the battery check is satisfactory -> should go bak to deployment 
             # after that function of checking battery is ran (and returns true) -> schedule_later = false -> should transition
             # after idle state -> should go back to science + comms 

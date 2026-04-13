@@ -1,5 +1,4 @@
 # each state should have an assigned code to it, which should be the minimum number of bits
-
 from enum import Enum
 
 class StateID(Enum):

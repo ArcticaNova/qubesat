@@ -2,7 +2,6 @@
 
 class Task():
 
-    #helllooooooo
     # each class should have a name (String)
     # priority (int) that numerically quantifies/can be sorted to determine order relative to another
     # the perod = amount of time needed to wait before task is execued 

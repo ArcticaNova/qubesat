@@ -14,6 +14,7 @@ class QubeSatFSM():
 
     def __init__(self):
         self.state = State.idle #default state = charging mode 
+        self.current_code = StateCodec.encode(StateID.IDLE) 
         self.missionTime = 0.0 # how much time has passed so far, 0 at the beginning
         self.power = PowerLevel()
         self.current_code = None # ADD THIS — tracks last received comms code
@@ -53,7 +54,7 @@ class QubeSatFSM():
     # tasks that should be executed when in the idle state 
     def build_idle_tasks(self):
         tasks=[Task("Beacon", 1, self.periods["beacon"], schedule_later=False, func=self._task_beacon),
-            Task("Battery Check", , self.periods["battery_check"],schedule_later=True, func=self._task_battery_check),
+            Task("Battery Check", 2 , self.periods["battery_check"],schedule_later=True, func=self._task_battery_check),
             Task("Transition Check", 3, self.periods["transition"], schedule_later=True,func=self._task_transition_check),]
         return tasks
 
@@ -87,14 +88,7 @@ class QubeSatFSM():
         this state is entered when battery is below the low_power_threshold
 
     '''
-    def build_idle_tasks(self): 
-        task = [
-            Task("Beacon", 1, self.periods["beacon"], schedule_later=False, func = self._task_beacon), 
-            Task("Battery Check", 2, self.periods["battery_check"], schedule_later = True, func = self._task_battery_check),
-            Task("Transition", 3, self.periods["transition"], schedule_later = True, func = self._task_transition_check)]
-            # after the battery check is satisfactory -> should go bak to deployment 
-            # after that function of checking battery is ran (and returns true) -> schedule_later = false -> should transition
-            # after idle state -> should go back to science + comms 
+    
         
         return tasks
         # self, name, priority, period, schedule_later, func
@@ -105,6 +99,7 @@ class QubeSatFSM():
         if new_state == self.state:
             return  # already here, do nothing
         self.state = new_state
+        self.current_code = StateCodec.encode(new_state)  # adding this so that when state changes -> so does current code
         self.tasks = self._build_tasks_for_state(new_state)
 
     def task_battery_check():

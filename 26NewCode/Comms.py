@@ -8,7 +8,7 @@ MODE = "probe"   # "probe", "listen", or "beacon"
 FREQ_MHZ = 433.0
 
 # Conservative LoRa settings
-SIGNAL_BW = 125000
+SIGNAL_BW = 125000                                                                                                                                                                                                                                                                      
 SPREADING_FACTOR = 7
 CODING_RATE = 8
 PREAMBLE_LEN = 8
@@ -42,6 +42,17 @@ def print_status(r):
     print("SF:", r.spreading_factor)
     print("CR:", r.coding_rate)
     print("CRC:", r.enable_crc)
+
+
+def handle_received_code(self, code: int):
+    if not StateCodec.is_valid(code):
+        return  # malformed, ignore
+    new_state = StateCodec.decode(code)
+    if new_state is None:
+        self.halt_transmission()
+    elif new_state != self.current_state:  # only transition if it's different
+        self.transition(new_state)
+    # if same state, do nothing — handles the spam case
 
 # -----------------------------
 # MAIN

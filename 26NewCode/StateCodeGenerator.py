@@ -5,7 +5,8 @@ class StateID(Enum):
     IDLE   = 1  # 001
     DEPLOY = 2  # 010
     SCIENCE= 3  # 011
-    COMMS  = 4  # 100
+    DATA = 4 #100
+    # comms has no number since it's running in parallel
     # 0 is reserved for stopping all transmission
 
 class StateCodec:
@@ -16,7 +17,7 @@ class StateCodec:
         StateID.IDLE:    0b001,
         StateID.DEPLOY:  0b010,
         StateID.SCIENCE: 0b011,
-        StateID.COMMS:   0b100,
+        StateID.DATA: 0b100
     }
     _decode = {v: k for k, v in _codes.items()}
 

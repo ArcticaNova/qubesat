@@ -89,9 +89,6 @@ class QubeSatFSM():
 
     '''
     
-        
-        return tasks
-        # self, name, priority, period, schedule_later, func
 
     # going to start defining the functions that are ran for each action in the tasks 
     

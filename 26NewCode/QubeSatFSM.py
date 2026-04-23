@@ -112,7 +112,7 @@ class QubeSatFSM():
     def _task_transition_check(self): pass
     def _task_init_sd_card(self): pass
     def _task_activate_burn_wire(self): pass
-    def _task_enable_solar_panels(self): pass
+    def _task_enable_solar_panels(self): pass # lowkey shouldnt it always be turned on?
     def _task_init_payload(self): pass
     def _task_receive_data(self): pass
     def _task_record_memory(self): pass

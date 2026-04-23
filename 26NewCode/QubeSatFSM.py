@@ -1,8 +1,9 @@
 import time 
+from pycubed import cubesat
 
 class QubeSatFSM():
-    high_level_threshold=80.0
-    low_level_threshold=20.0
+    high_level_threshold=8.4 # this is enforced by pycube itself 
+    low_level_threshold=6.0 # when it reaches this low level -> switch to idle/charging state
 
     # initalizing some values/parts of the qubesat (still very incomplete atp)
     '''
@@ -100,8 +101,8 @@ class QubeSatFSM():
         self.tasks = self._build_tasks_for_state(new_state)
 
     def task_battery_check():
-        level = self.power.curr_level() # this has to be connected to some sort of hardware call to check battery 
-        if level < low_level_threshold: 
+        vbatt = cubesat.battery_voltage # this has to be connected to some sort of hardware call to check battery 
+        if vbatt <= low_level_threshold: 
             self.transition(StateID.IDLE)
 
     def halt_transmission(self):

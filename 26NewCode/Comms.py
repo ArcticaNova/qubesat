@@ -2,6 +2,19 @@ import time
 from pycubed import cubesat
 
 # -----------------------------
+# STATE CODES
+# Mirrors StateCodeGenerator.py (which uses enum and is ground-station only).
+# These integer values must stay in sync with StateID in StateCodeGenerator.py.
+# -----------------------------
+STATE_STOP    = 0   # reserved — halt all transmission
+STATE_IDLE    = 1   # 0b001
+STATE_DEPLOY  = 2   # 0b010
+STATE_SCIENCE = 3   # 0b011
+STATE_DATA    = 4   # 0b100
+
+_VALID_CODES = (STATE_STOP, STATE_IDLE, STATE_DEPLOY, STATE_SCIENCE, STATE_DATA)
+
+# -----------------------------
 # CONFIG
 # -----------------------------
 MODE = "probe"   # "probe", "listen", or "beacon"
@@ -45,13 +58,12 @@ def print_status(r):
 
 
 def handle_received_code(self, code: int):
-    if not StateCodec.is_valid(code):
-        return  # malformed, ignore
-    new_state = StateCodec.decode(code)
-    if new_state is None:
+    if code not in _VALID_CODES:
+        return  # unrecognized code — ignore
+    if code == STATE_STOP:
         self.halt_transmission()
-    elif new_state != self.current_state:  # only transition if it's different
-        self.transition(new_state)
+    elif code != self.current_state:  # only transition if it's a different state
+        self.transition(code)
     # if same state, do nothing — handles the spam case
 
 # -----------------------------

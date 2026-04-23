@@ -1,4 +1,8 @@
-import time 
+import time
+from StateCodeGenerator import StateID
+from Comms import CommsManager, configure_radio, STATE_STOP, STATE_IDLE, STATE_DEPLOY, STATE_SCIENCE, STATE_DATA
+from Task import Task
+from PowerLevel import PowerLevel
 
 class QubeSatFSM():
     high_level_threshold=80.0
@@ -130,11 +134,6 @@ class QubeSatFSM():
         if self.comms is not None:
             self.comms.state_code = self.current_code   # keep NVM in sync
         self.tasks = self._build_tasks_for_state(new_state)
-
-    def task_battery_check():
-        level = self.power.curr_level() # this has to be connected to some sort of hardware call to check battery 
-        if level < low_level_threshold: 
-            self.transition(StateID.IDLE)
 
     def halt_transmission(self):
         """Stop all radio activity immediately and remove the beacon task."""

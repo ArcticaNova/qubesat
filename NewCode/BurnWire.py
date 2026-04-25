@@ -42,7 +42,7 @@ class BurnWire() :
 
 def BurnWireObject() :
     e = BurnWire()
-    e.cubesatBurn("1", 0.25, 30)
+    e.cubesatBurn("1", 0.10, 30)
 
 BurnWireObject()
 

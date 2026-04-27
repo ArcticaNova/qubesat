@@ -60,7 +60,7 @@ class QubeSatFSM():
         return tasks
 
     # initalize sd card -> activate burn wire -> check battery -> beacon -> transition
-    def build_deployment_tasks(self):
+    def build_deploy_tasks(self):
         tasks=[Task("SD_Card", 1, self.periods["sd_card"], schedule_later=False, func=self._task_init_sd_card), 
         Task("Burn Wire", 2, self.periods["burn_wire"], schedule_later=True, func=self._task_activate_burn_wire),
         Task("Battery Check", 3, self.periods["battery_check"], schedule_later=True, func=self._task_battery_check), 
@@ -100,20 +100,41 @@ class QubeSatFSM():
         self.current_code = StateCodec.encode(new_state)  # adding this so that when state changes -> so does current code
         self.tasks = self._build_tasks_for_state(new_state)
 
-    def task_battery_check():
+    def task_battery_check(self):
         vbatt = cubesat.battery_voltage # this has to be connected to some sort of hardware call to check battery 
-        if vbatt <= low_level_threshold: 
+        if vbatt <= self.low_level_threshold: 
             self.transition(StateID.IDLE)
 
     def halt_transmission(self):
         # stop beacon and any outgoing radio tasks
         self.tasks = [t for t in self.tasks if t.name != "Beacon"]
 
+    # lowkey shouldnt it always be turned on?
+    # okie need to turn on solar panel 
+    # i think solar input is enabled by hardware and not software, so ill just check current for now 
+    def _task_enable_solar_panels(self): 
+        charging_current = cubesat.charging_current  # reads PROG pin voltage, valid when CHRG is low
+        print(f"[COMMS] Charge current: {charging_current:.3f} A")
+    
+        if charging_current > 0:
+            self.solar_panels_on = True
+            print("[COMMS] Solar panels confirmed charging.")
+        else:
+            self.solar_panels_on = False
+            print("[COMMS] Warning: No charge current detected.")
+         
+    # burn wire clAss is already made -> just need to call it 
+    def _task_activate_burn_wire(self): 
+        burn = BurnWire()
+        burn.cubesatBurn("1", 0.25, 30)  # burn wire 1, 25% duty cycle, 30 seconds
+        print(f"[DEPLOY] Burn wire status: {burn.burningCheck()}")
+
+
+
+    
     def _task_beacon(self): pass
     def _task_transition_check(self): pass
     def _task_init_sd_card(self): pass
-    def _task_activate_burn_wire(self): pass
-    def _task_enable_solar_panels(self): pass # lowkey shouldnt it always be turned on?
     def _task_init_payload(self): pass
     def _task_receive_data(self): pass
     def _task_record_memory(self): pass

@@ -1,3 +1,5 @@
+import time
+
 # this is a very general class that will represent the type of every "action" during the mission
 
 class Task():

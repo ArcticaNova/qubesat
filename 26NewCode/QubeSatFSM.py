@@ -129,12 +129,14 @@ class QubeSatFSM():
         burn.cubesatBurn("1", 0.25, 30)  # burn wire 1, 25% duty cycle, 30 seconds
         print(f"[DEPLOY] Burn wire status: {burn.burningCheck()}")
 
+    
+    def _task_init_sd_card(self): pass
+
 
 
     
     def _task_beacon(self): pass
     def _task_transition_check(self): pass
-    def _task_init_sd_card(self): pass
     def _task_init_payload(self): pass
     def _task_receive_data(self): pass
     def _task_record_memory(self): pass

@@ -18,7 +18,7 @@ from pycubed import cubesat
 
 # ── State codes ────────────────────────────────────────────────────────────────
 # Must stay in sync with StateID in StateCodeGenerator.py.
-STATE_STOP    = 0   # reserved — halt all transmission
+STATE_STOP    = 0   # halt all transmission; RX stays active so a non-zero command can wake it
 STATE_IDLE    = 1   # 0b001
 STATE_DEPLOY  = 2   # 0b010
 STATE_SCIENCE = 3   # 0b011
@@ -326,8 +326,12 @@ class CommsManager:
             (command processing pauses the window — that tick is not counted).
         TX: advances packet counter each time a packet is sent. Switches back to
             RX immediately if both queues drain before hitting tx_packet_count.
+
+        When state_code is 0 (STOP): RX-only — listens for a wake-up command
+        but never transmits and never advances the RX/TX schedule.
         """
         if self._state_code == 0:
+            self._rx_tick()   # stay alive so ground can send a non-zero state command
             return
 
         if self._mode == self._RX:

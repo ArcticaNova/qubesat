@@ -22,16 +22,19 @@ STATE_STOP    = 0   # halt all transmission; RX stays active so a non-zero comma
 STATE_IDLE    = 1   # 0b001
 STATE_DEPLOY  = 2   # 0b010
 STATE_SCIENCE = 3   # 0b011
-STATE_DATA    = 4   # 0b100
+STATE_COMMS   = 4   # 0b100  (downlink / ground contact window)
 
-_VALID_CODES = (STATE_STOP, STATE_IDLE, STATE_DEPLOY, STATE_SCIENCE, STATE_DATA)
+_VALID_CODES = (STATE_STOP, STATE_IDLE, STATE_DEPLOY, STATE_SCIENCE, STATE_COMMS)
 
 # ── Radio hardware config ──────────────────────────────────────────────────────
+# These values must match exactly what is registered on https://tinygs.com for QubeSat.
+# Confirm the frequency is within your IARU/FCC license before flight.
 FREQ_MHZ         = 433.0
 SIGNAL_BW        = 125000
 SPREADING_FACTOR = 7
-CODING_RATE      = 8
+CODING_RATE      = 5    # 4/5 — most common TinyGS coding rate; was 8 (4/8)
 PREAMBLE_LEN     = 8
+SYNC_WORD        = 0x12  # LoRa public-network sync word — required by TinyGS (decimal 18)
 ENABLE_CRC       = True
 TX_POWER_DBM     = 5
 
@@ -192,6 +195,52 @@ def build_config_command(rx_ticks, tx_packet_count, telem_cadence):
                   rx_ticks & 0xFF, tx_packet_count & 0xFF, telem_cadence & 0xFF,
                   (~rx_ticks) & 0xFF])
     return bytes([HDR_COMMAND]) + _encrypt(body + bytes([_crc8(body)]))
+
+
+# ── TinyGS callsign and beacon packet ─────────────────────────────────────────
+# Replace with your FCC/ITU-assigned amateur radio callsign before flight.
+# This must match exactly what you register on https://tinygs.com
+CALLSIGN = "STAC  "   # 6 ASCII characters, space-padded on the right
+
+
+def build_beacon_packet(state_code, batt_v, temp_c, mission_time_s):
+    """
+    Build a TinyGS-compatible telemetry payload (15 bytes).
+
+    Pass the returned bytes to CommsManager.push_telemetry() — the manager
+    prepends HDR_TELEMETRY (0xD0) before transmitting, so the full on-air
+    packet is 16 bytes.
+
+    Wire layout:
+      [0-5]   callsign        6 bytes ASCII, space-padded
+      [6]     state code      uint8
+      [7-8]   battery mV      uint16 big-endian  (e.g. 7400 → 7.400 V)
+      [9]     temperature     uint8, value = int(temp_C) + 40  (range -40..215 °C)
+      [10-13] mission time    uint32 big-endian, seconds since boot
+      [14]    CRC-8           over bytes 0-13
+
+    Register these radio parameters and this field layout on https://tinygs.com
+    so the network can decode and display your telemetry automatically.
+    """
+    batt_mv  = max(0, min(65535, int(batt_v * 1000)))
+    temp_raw = max(0, min(255, int(temp_c) + 40))
+    t        = max(0, min(0xFFFFFFFF, int(mission_time_s)))
+
+    cs = CALLSIGN[:6].ljust(6).encode("ascii")  # always exactly 6 bytes
+
+    payload = bytearray()
+    payload.extend(cs)
+    payload.append(state_code & 0x7F)
+    payload.append((batt_mv >> 8) & 0xFF)
+    payload.append(batt_mv & 0xFF)
+    payload.append(temp_raw)
+    payload.append((t >> 24) & 0xFF)
+    payload.append((t >> 16) & 0xFF)
+    payload.append((t >>  8) & 0xFF)
+    payload.append(t & 0xFF)
+    payload.append(_crc8(payload))
+
+    return bytes(payload)
 
 
 # ── Ring queue ─────────────────────────────────────────────────────────────────
@@ -468,6 +517,7 @@ def configure_radio():
     r.spreading_factor = SPREADING_FACTOR
     r.coding_rate      = CODING_RATE
     r.preamble_length  = PREAMBLE_LEN
+    r.node             = SYNC_WORD   # sets sync word; required for TinyGS to receive packets
     r.enable_crc       = ENABLE_CRC
     r.tx_power         = TX_POWER_DBM
     return r

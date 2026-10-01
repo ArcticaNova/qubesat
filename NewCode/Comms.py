@@ -35,22 +35,25 @@ SPREADING_FACTOR = 7
 CODING_RATE      = 5    # 4/5 — most common TinyGS coding rate; was 8 (4/8)
 PREAMBLE_LEN     = 8
 SYNC_WORD        = 0x12  # LoRa public-network sync word — required by TinyGS (decimal 18)
+_REG_SYNC_WORD   = 0x39  # SX127x sync word register (pycubed_rfm9x has no property for it)
+_BROADCAST       = 0xFF  # RadioHead "accept any address" value
 ENABLE_CRC       = True
 TX_POWER_DBM     = 5
 
-# ── NVM layout (bytes 12–18) ───────────────────────────────────────────────────
-#  12–14: three copies of the state code (majority vote on read)
-#  15   : state checksum (state ^ 0xAA)  (tiebreaker if all three differ)
-#  16   : config rx_ticks
-#  17   : config tx_packet_count
-#  18   : config telem_cadence
-_NVM_S1      = 12
-_NVM_S2      = 13
-_NVM_S3      = 14
-_NVM_CS      = 15
-_NVM_CFG_RX  = 16
-_NVM_CFG_TX  = 17
-_NVM_CFG_CAD = 18
+# ── NVM layout (bytes 20–26) ───────────────────────────────────────────────────
+# pycubed.py already uses bytes 0, 6, 7, 9, 10, 11 and 16 — keep clear of those.
+#  20–22: three copies of the state code (majority vote on read)
+#  23   : state checksum (state ^ 0xAA)  (tiebreaker if all three differ)
+#  24   : config rx_ticks
+#  25   : config tx_packet_count
+#  26   : config telem_cadence
+_NVM_S1      = 20
+_NVM_S2      = 21
+_NVM_S3      = 22
+_NVM_CS      = 23
+_NVM_CFG_RX  = 24
+_NVM_CFG_TX  = 25
+_NVM_CFG_CAD = 26
 
 try:
     import microcontroller
@@ -214,16 +217,19 @@ def build_beacon_packet(state_code, batt_v, temp_c, mission_time_s):
     Wire layout:
       [0-5]   callsign        6 bytes ASCII, space-padded
       [6]     state code      uint8
-      [7-8]   battery mV      uint16 big-endian  (e.g. 7400 → 7.400 V)
-      [9]     temperature     uint8, value = int(temp_C) + 40  (range -40..215 °C)
+      [7-8]   battery mV      uint16 big-endian  (e.g. 7400 → 7.400 V), 0 = unknown
+      [9]     temperature     uint8, value = int(temp_C) + 40  (range -40..214 °C), 0xFF = unknown
       [10-13] mission time    uint32 big-endian, seconds since boot
       [14]    CRC-8           over bytes 0-13
 
     Register these radio parameters and this field layout on https://tinygs.com
     so the network can decode and display your telemetry automatically.
+
+    batt_v / temp_c may be None (pycubed returns None when a sensor is down);
+    those fields are sent as their "unknown" values instead of crashing.
     """
-    batt_mv  = max(0, min(65535, int(batt_v * 1000)))
-    temp_raw = max(0, min(255, int(temp_c) + 40))
+    batt_mv  = 0 if batt_v is None else max(0, min(65535, int(batt_v * 1000)))
+    temp_raw = 0xFF if temp_c is None else max(0, min(254, int(temp_c) + 40))
     t        = max(0, min(0xFFFFFFFF, int(mission_time_s)))
 
     cs = CALLSIGN[:6].ljust(6).encode("ascii")  # always exactly 6 bytes
@@ -293,9 +299,10 @@ class CommsConfig:
 
     def __init__(self):
         rx, tx, cad = _nvm_read_config()
-        self.rx_ticks        = rx  or self.DEFAULT_RX_TICKS
-        self.tx_packet_count = tx  or self.DEFAULT_TX_PACKET_COUNT
-        self.telem_cadence   = cad or self.DEFAULT_TELEM_CADENCE
+        # 0 or 0xFF means the byte was never written (fresh NVM may read as either)
+        self.rx_ticks        = rx  if rx  not in (0, 0xFF) else self.DEFAULT_RX_TICKS
+        self.tx_packet_count = tx  if tx  not in (0, 0xFF) else self.DEFAULT_TX_PACKET_COUNT
+        self.telem_cadence   = cad if cad not in (0, 0xFF) else self.DEFAULT_TELEM_CADENCE
 
     def apply(self, rx_ticks, tx_packet_count, telem_cadence):
         self.rx_ticks        = max(1, rx_ticks        & 0xFF)
@@ -495,14 +502,15 @@ class CommsManager:
 
     def _receive(self):
         try:
-            return self._radio.receive(timeout=0.1)
+            # with_header=True: return the bytes exactly as they were on air (see send_raw)
+            return self._radio.receive(timeout=0.1, with_header=True)
         except Exception as e:
             print("[COMMS] RX error:", e)
             return None
 
     def _send(self, header, payload):
         try:
-            self._radio.send(bytes([header]) + payload)
+            send_raw(self._radio, bytes([header]) + payload)
         except Exception as e:
             print("[COMMS] TX error:", e)
 
@@ -517,10 +525,32 @@ def configure_radio():
     r.spreading_factor = SPREADING_FACTOR
     r.coding_rate      = CODING_RATE
     r.preamble_length  = PREAMBLE_LEN
-    r.node             = SYNC_WORD   # sets sync word; required for TinyGS to receive packets
     r.enable_crc       = ENABLE_CRC
     r.tx_power         = TX_POWER_DBM
+    r._write_u8(_REG_SYNC_WORD, SYNC_WORD)   # required for TinyGS to receive packets
+    # `node` is a RadioHead address filter, not the sync word. Broadcast = accept
+    # every packet; Comms does its own filtering by header byte.
+    r.node             = _BROADCAST
     return r
+
+
+def send_raw(radio, packet):
+    """
+    Transmit `packet` so the bytes on air are exactly `packet`.
+
+    pycubed_rfm9x.send() always prepends a 4-byte RadioHead header
+    (destination, node, identifier, flags). Feeding the first 4 bytes of our
+    packet in as those header fields makes the on-air bytes match our layout,
+    which TinyGS and tinygs_decoder.py expect. Packets shorter than 5 bytes are
+    zero-padded (the driver needs at least 1 byte after the header).
+
+    Ground stations using pycubed_rfm9x should send commands with this too.
+    """
+    packet = bytes(packet)
+    if len(packet) < 5:
+        packet = packet + bytes(5 - len(packet))
+    return radio.send(packet[4:], destination=packet[0], node=packet[1],
+                      identifier=packet[2], flags=packet[3])
 
 
 def print_status(r):

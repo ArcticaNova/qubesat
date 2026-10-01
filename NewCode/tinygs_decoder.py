@@ -20,8 +20,8 @@ Beacon packet layout (16 bytes on air):
   Byte 0      : header 0xD0 (HDR_TELEMETRY, stripped by ground station)
   Bytes 1-6   : callsign (6 ASCII chars, space-padded)
   Byte 7      : FSM state code (0=STOP 1=IDLE 2=DEPLOY 3=SCIENCE 4=COMMS)
-  Bytes 8-9   : battery voltage in millivolts, uint16 big-endian
-  Byte 10     : temperature, uint8, value = int(temp_C) + 40
+  Bytes 8-9   : battery voltage in millivolts, uint16 big-endian (0 = unknown)
+  Byte 10     : temperature, uint8, value = int(temp_C) + 40 (0xFF = unknown)
   Bytes 11-14 : mission time in seconds since boot, uint32 big-endian
   Byte 15     : CRC-8/ITU over bytes 1-14 (payload only, not the header byte)
 """
@@ -67,14 +67,14 @@ def decode(raw_packet):
     callsign     = payload[0:6].decode("ascii", errors="replace").strip()
     state_code   = payload[6]
     batt_mv      = (payload[7] << 8) | payload[8]
-    temp_c       = payload[9] - 40
+    temp_c       = None if payload[9] == 0xFF else payload[9] - 40   # 0xFF = sensor down
     mission_time = (payload[10] << 24) | (payload[11] << 16) | (payload[12] << 8) | payload[13]
 
     return {
         "callsign":        callsign,
         "state_code":      state_code,
         "state_name":      _STATE_NAMES.get(state_code, "UNKNOWN"),
-        "battery_v":       round(batt_mv / 1000.0, 3),
+        "battery_v":       round(batt_mv / 1000.0, 3) if batt_mv else None,   # 0 = sensor down
         "temperature_c":   temp_c,
         "mission_time_s":  mission_time,
     }

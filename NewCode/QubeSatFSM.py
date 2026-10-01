@@ -141,6 +141,9 @@ class QubeSatFSM:
     def _task_battery_check(self):
         try:
             vbatt = cubesat.battery_voltage
+            if vbatt is None:
+                print("[BATTERY] No reading.")
+                return
             print(f"[BATTERY] {vbatt:.2f} V")
             if vbatt <= LOW_LEVEL_THRESHOLD:
                 print("[BATTERY] Low — going IDLE.")
@@ -156,14 +159,16 @@ class QubeSatFSM:
         """Collect live telemetry, build a beacon packet, and push it to the TX queue."""
         if not self.comms:
             return
+        # pycubed returns None (rather than raising) when a sensor is down;
+        # build_beacon_packet encodes None as "unknown".
         try:
             vbatt = cubesat.battery_voltage
         except Exception:
-            vbatt = 0.0
+            vbatt = None
         try:
             temp_c = cubesat.temperature
         except Exception:
-            temp_c = 0.0
+            temp_c = None
 
         packet = build_beacon_packet(
             self.current_code,
@@ -174,7 +179,7 @@ class QubeSatFSM:
         self.comms.push_telemetry(packet)
         print(
             f"[BEACON] Queued: state={self.current_code} "
-            f"batt={vbatt:.2f}V temp={temp_c:.1f}C t={int(self.mission_time)}s"
+            f"batt={vbatt}V temp={temp_c}C t={int(self.mission_time)}s"
         )
 
     def _task_transition_check(self):
@@ -196,9 +201,9 @@ class QubeSatFSM:
 
     def _task_enable_solar_panels(self):
         try:
-            charging_current = cubesat.charging_current
-            print(f"[COMMS] Charge current: {charging_current:.3f} A")
-            self.solar_panels_on = charging_current > 0
+            charge_ma = cubesat.charge_current()   # mA; 0 when not solar charging
+            print(f"[COMMS] Charge current: {charge_ma:.1f} mA")
+            self.solar_panels_on = charge_ma > 0
             self.equipment_check["solar_panel"] = self.solar_panels_on
             if self.solar_panels_on:
                 print("[COMMS] Solar panels confirmed charging.")
@@ -219,7 +224,10 @@ class QubeSatFSM:
 
     def _task_init_sd_card(self):
         try:
+            # new_file returns None (rather than raising) when there is no SD card
             self.log_file = cubesat.new_file('/data/mission', binary=False)
+            if self.log_file is None:
+                raise RuntimeError("no SD card (new_file returned None)")
             self.sd_card_initialized = True
             self.equipment_check["sd_card"] = True
             print(f"[DEPLOY] SD card ready: {self.log_file}")

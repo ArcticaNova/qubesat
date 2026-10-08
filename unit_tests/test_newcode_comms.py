@@ -23,6 +23,12 @@ class FakeRadio:
     def _write_u8(self, address, val):
         self.regs[address] = val
 
+    def sleep(self):
+        pass
+
+    def idle(self):
+        pass
+
     def send(self, data, *, keep_listening=False, destination=None, node=None,
              identifier=None, flags=None):
         assert 0 < len(data) <= 252
@@ -61,7 +67,7 @@ class TestNewCodeComms(unittest.TestCase):
     def setUp(self):
         _fake_pycubed.cubesat.radio1 = FakeRadio()
         self.radio = Comms.configure_radio()
-        self.comms = Comms.CommsManager(self.radio)
+        self.comms = Comms.CommsManager(self.radio, default_modulation=Comms.LORA)
         self.comms.state_code = Comms.STATE_IDLE
 
     def test_configure_radio_sets_sync_word_and_broadcast_node(self):

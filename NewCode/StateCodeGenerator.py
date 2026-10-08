@@ -1,13 +1,11 @@
-# each state should have an assigned code to it, which should be the minimum number of bits
-# comms has no number since it's running in parallel
-# 0 is reserved for stopping all transmission
-
+# Each state has an assigned code — minimum number of bits needed to represent it.
+# 0 is reserved for STOP (halt all transmission).
 
 class StateID:
     IDLE    = 1   # 001
     DEPLOY  = 2   # 010
     SCIENCE = 3   # 011
-    DATA    = 4   # 100
+    COMMS   = 4   # 100  (downlink / ground contact window)
 
 
 class StateCodec:
@@ -17,7 +15,7 @@ class StateCodec:
         StateID.IDLE:    0b001,
         StateID.DEPLOY:  0b010,
         StateID.SCIENCE: 0b011,
-        StateID.DATA:    0b100,
+        StateID.COMMS:   0b100,
     }
     _decode = {v: k for k, v in _codes.items()}
 

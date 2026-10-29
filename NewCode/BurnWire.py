@@ -31,7 +31,7 @@ class BurnWire() :
         burnwire.duty_cycle = int((dutycycle/100)*(0xFFFF))
         print(f"Wire {burn_num} has started burning")
         targetDutyCycle = int((dutycycle/100)*(0xFFFF))
-        steps = 10
+        steps = 100
         for i in range(1, steps + 1) :
             burnwire.duty_cycle = int(targetDutyCycle * i / steps)
             print(f"Duty cycle at {burnwire.duty_cycle} and {burnwire.duty_cycle / 0xFFFF * 100}% of the max duty cycle.")
@@ -52,6 +52,6 @@ class BurnWire() :
 
 def BurnWireObject() :
     e = BurnWire()
-    e.cubesatBurn("2", 25, 30)
+    e.cubesatBurn("2", 2, 30)
 
 BurnWireObject()

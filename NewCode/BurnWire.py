@@ -3,6 +3,9 @@ import board
 import pycubed
 import digitalio
 import pwmio
+import microcontroller
+
+print("Reset reason:", microcontroller.cpu.reset_reason) #tells us the reason for previous failure if necessary
 
 class BurnWire() :
     freq = 1000
@@ -34,7 +37,9 @@ class BurnWire() :
             print(f"Duty cycle at {burnwire.duty_cycle} and {burnwire.duty_cycle / 0xFFFF * 100}% of the max duty cycle.")
             time.sleep(0.5)
 
-        time.sleep(300)
+        print(microcontroller.cpu.reset_reason)
+
+        time.sleep(300) #I don't remember the exact reason why we chose to leave the burnwire system on for another five minutes after reaching max designated dutycycle tbh
         print(f"Wire {burn_num} has finished burning")
 
         self.isBurning = False
@@ -47,10 +52,6 @@ class BurnWire() :
 
 def BurnWireObject() :
     e = BurnWire()
-    e.cubesatBurn("2", 100, 30)
+    e.cubesatBurn("2", 2, 30)
 
 BurnWireObject()
-
-#initial test should be the following:
-#from pycubed import cubesat
-#cubesatBurn("1", 0.05, 1)

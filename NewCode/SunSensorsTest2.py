@@ -1,31 +1,21 @@
-import analogio
-import board
 import time
+import board
+import analogio
+import digitalio
 
-print("Attempting direct analog pin read...")
-print("-----------------------------------")
+print("Initializing LTC4121 pins...")
+prog_adc = analogio.AnalogIn(board.L1PROG)
 
-# Trying standard PyCubed solar voltage ADC pin mappings
-pin_options = ['V_SOLAR', 'A5', 'A6', 'AIN5']
-solar_pin = None
+chrg = digitalio.DigitalInOut(board.CHRG)
+chrg.direction = digitalio.Direction.INPUT
+chrg.pull = digitalio.Pull.UP
 
-for pin_name in pin_options:
-    if hasattr(board, pin_name):
-        try:
-            solar_pin = analogio.AnalogIn(getattr(board, pin_name))
-            print(f"Successfully bound to pin: board.{pin_name}")
-            break
-        except Exception as e:
-            print(f"Could not bind to board.{pin_name}: {e}")
+print("Started! Reading solar current every 1s:")
 
-if solar_pin:
-    while True:
-        # Read the 16-bit analog value (0 to 65535) and convert to voltage
-        voltage = (solar_pin.value * 3.3) / 65536
-        # A 10k/10k voltage divider scales voltage by half; multiply by 2 to get actual value
-        actual_voltage = voltage * 2 
-        
-        print(f"Raw Pin: {solar_pin.value} | Scaled: {voltage:.2f}V | Estimated Solar Input: {actual_voltage:.2f}V")
-        time.sleep(0.5)
-else:
-    print("Could not find a valid solar pin mapping on this board definition.")
+while True:
+    raw = prog_adc.value
+    v_prog = (raw * 3.3) / 65536
+    solar_ma = (v_prog / 3010.0) * 1000.0 * 1000.0
+    
+    print(f"CHRG Active: {not chrg.value} | L1PROG Raw: {raw} ({v_prog:.3f} V) | Current: {solar_ma:.2f} mA")
+    time.sleep(1.0)

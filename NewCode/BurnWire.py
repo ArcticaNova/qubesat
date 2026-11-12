@@ -49,7 +49,7 @@ def BurnWireObject() :
     e = BurnWire()
     e.cubesatBurn("2", 100, 30)
 
-BurnWireObject()
+# Do not call BurnWireObject() here: importing this file would fire the burn wire.
 
 #initial test should be the following:
 #from pycubed import cubesat

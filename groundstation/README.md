@@ -47,6 +47,9 @@ currently the all-zero placeholder. Set the real key with
 
 ## Bench test
 
+The full test procedure is Annex A4 of STAC-AIT-ITP-001, mirrored in
+`../NewCode/ANNEX-A4-COMMS.md`. Short version:
+
 1. Put `NewCode/fsk_listen_test.py` on the PyCubed as `code.py`, with
    `Comms.py` and `DualModeRadio.py`. Burn wires disconnected.
 2. Open the PyCubed serial output: `screen /dev/tty.usbmodem101 115200`.
